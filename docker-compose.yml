@@ -1,0 +1,78 @@
+version: '3.9'
+
+services:
+  # ── PostgreSQL Database ─────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: carelink-db
+    environment:
+      POSTGRES_DB:       carelink
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: carelink123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d carelink"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - carelink-net
+
+  # ── Backend API ─────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend.Dockerfile
+    container_name: carelink-backend
+    environment:
+      NODE_ENV:          production
+      PORT:              5000
+      DB_HOST:           postgres
+      DB_PORT:           5432
+      DB_NAME:           carelink
+      DB_USER:           postgres
+      DB_PASSWORD:       carelink123
+      JWT_SECRET:        ${JWT_SECRET:-carelink-docker-secret}
+      AWS_REGION:        ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      S3_BUCKET_NAME:    ${S3_BUCKET_NAME:-carelink-medical-records}
+      DYNAMODB_VITALS_TABLE: ${DYNAMODB_VITALS_TABLE:-carelink-vitals}
+      SNS_ALERT_TOPIC_ARN:   ${SNS_ALERT_TOPIC_ARN:-}
+      KINESIS_VITALS_STREAM: ${KINESIS_VITALS_STREAM:-carelink-vitals-stream}
+      FRONTEND_URL:      http://localhost:5173
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - carelink-net
+
+  # ── Frontend ────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/frontend.Dockerfile
+    container_name: carelink-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - carelink-net
+
+volumes:
+  pg_data:
+    driver: local
+
+networks:
+  carelink-net:
+    driver: bridge
