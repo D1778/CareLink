@@ -32,37 +32,6 @@
                └─────────┘
 ```
 
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 20+
-- npm 10+
-- PostgreSQL 15+ (local) or AWS RDS
-
-### Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
-Runs at: http://localhost:5173
-
-### Backend
-```bash
-cd backend
-npm install
-cp .env .env.local   # Edit with your values
-node server.js
-```
-Runs at: http://localhost:5000
-
-### Docker (Full Stack)
-```bash
-docker-compose up --build
-```
-- Frontend: http://localhost
-- Backend API: http://localhost:5000
-- Health check: http://localhost:5000/health
 
 ## 🔐 Demo Credentials
 
